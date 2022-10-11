@@ -79,7 +79,7 @@
      getStatus()
    ]);
    const o = {
-     commmit: commit,
+     commit: commit,
      head: head,
      tags: tag,
      status: status
