@@ -1,74 +1,93 @@
-const process = require('child_process'),
-  splitCharacter = '<##>'
-
-const executeCommand = (command, options, callback) => {
-  let dst = __dirname
-
-  if(!!options && options.dst) {
-    dst = options.dst
-  }
-
-  process.exec(command, {cwd: dst}, function(err, stdout, stderr) {
-    if (stdout === '') {
-      callback('this does not look like a git repo')
-      return
-    }
-
-    if (stderr) {
-      callback(stderr)
-      return
-    }
-
-    callback(null, stdout)
-  })
-}
-
-const prettyFormat = ["%h", "%H", "%s", "%f", "%b", "%at", "%ct", "%an", "%ae", "%cn", "%ce", "%N", ""]
-
-const getCommandString = splitCharacter =>
-  'git log -1 --pretty=format:"' + prettyFormat.join(splitCharacter) +'"' +
-    ' && git rev-parse --abbrev-ref HEAD' +
-    ' && git tag --contains HEAD'
-
-const getLastCommit = (callback, options) => {
-  const command = getCommandString(splitCharacter)
-
-  executeCommand(command, options, function(err, res) {
-    if (err) {
-      callback(err)
-      return
-    }
-
-    var a = res.split(splitCharacter)
-
-    // e.g. master\n or master\nv1.1\n or master\nv1.1\nv1.2\n
-    var branchAndTags = a[a.length-1].split('\n').filter(n => n)
-    var branch = branchAndTags[0]
-    var tags = branchAndTags.slice(1)
-
-    callback(null, {
-      shortHash: a[0],
-      hash: a[1],
-      subject: a[2],
-      sanitizedSubject: a[3],
-      body: a[4],
-      authoredOn: a[5],
-      committedOn: a[6],
-      author: {
-        name: a[7],
-        email: a[8],
-      },
-      committer: {
-        name: a[9],
-        email: a[10]
-      },
-      notes: a[11],
-      branch,
-      tags
-    })
-  })
-}
-
-module.exports = {
-  getLastCommit
-}
+/**
+ * Adapted from https://github.com/seymen/git-last-commit
+ */
+ const process = require('child_process');
+ const e = require('cors');
+ const executeCommand = (command, options) => {
+   return new Promise((resolve,reject) =>{
+     let dst = __dirname
+ 
+     if(!!options && options.dst) {
+       dst = options.dst
+     }
+     process.exec(command, {cwd: dst}, function(err, stdout, stderr) {
+       if (stderr) {
+         reject(stderr)
+         return
+       }
+       resolve(stdout)
+     })
+   });
+ }
+ 
+ const getLog = async () =>{
+   const splitCharacter = '<##>';
+   const LogAttributes = [
+     {symbol: "%h", name: "shortHash"}, 
+     {symbol: "%H", name: "hash"}, 
+     {symbol: "%s", name: "subject"}, 
+     {symbol: "%f", name: "sanitizedSubject"}, 
+     {symbol: "%b", name: "body"}, 
+     {symbol: "%at", name: "authoredOn"}, 
+     {symbol: "%ct", name: "committedOn"}, 
+     {symbol: "%an", name: "author.name"}, 
+     {symbol: "%ae", name: "author.email"}, 
+     {symbol: "%cn", name: "committer.name"}, 
+     {symbol: "%ce", name: "committer.email"}, 
+     {symbol: "%N", name: "notes"}
+   ]
+   const command =  'git log -1 --pretty=format:"' + LogAttributes.map(f=>f.symbol).join(splitCharacter) +'"';
+   const res = await executeCommand(command);
+   let response = {};
+   res.split(splitCharacter).forEach((d,i,a) => {
+     const keyName = LogAttributes[i].name
+     if (keyName.includes(".")) {
+       const s = keyName.split(".")
+       response [s[0]] = {
+         [s[1]]: s
+       }
+     }
+     else {
+       response[keyName] = d;
+     }
+   })
+ 
+   return response
+ }
+ 
+ const getHead = async ()=> {
+   const command =  'git rev-parse --abbrev-ref HEAD'
+   return (await executeCommand(command)).split("\n").filter(n=>n)[0]
+ }
+ 
+ const getTags = async ()=> {
+   const command =  'git tag --contains HEAD'
+   return (await executeCommand(command)).split("\n").filter(n=>n)
+ }
+ 
+ const getStatus = async() => {
+   const command =  'git status --porcelain'
+   const status = (await executeCommand(command)).split("\n").filter(n=>n)
+   return status;
+ }
+ 
+ const getRepoInfo = async () => {
+   const [commit, head, tag, status] = await Promise.all([
+     getLog(),
+     getHead(),
+     getTags(),
+     getStatus()
+   ]);
+   const o = {
+     commmit: commit,
+     head: head,
+     tags: tag,
+     status: status
+   }
+   return o;
+ }
+ 
+ module.exports = {
+   getRepoInfo
+ }
+ 
