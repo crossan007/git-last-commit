@@ -5,12 +5,7 @@
  const e = require('cors');
  const executeCommand = (command, options) => {
    return new Promise((resolve,reject) =>{
-     let dst = __dirname
- 
-     if(!!options && options.dst) {
-       dst = options.dst
-     }
-     process.exec(command, {cwd: dst}, function(err, stdout, stderr) {
+     process.exec(command, {}, function(err, stdout, stderr) {
        if (stderr) {
          reject(stderr)
          return
