@@ -1,6 +1,6 @@
 {
-  "name": "git-last-commit",
-  "version": "1.0.1",
+  "name": "@crossan007/git-last-commit",
+  "version": "2.0.0",
   "description": "Read details of the last commit including tags",
   "main": "./source/index.js",
   "types": "./index.d.ts",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/seymen/git-last-commit"
+    "url": "https://github.com/crossan007/git-last-commit"
   },
   "keywords": [
     "git",
@@ -19,12 +19,21 @@
     "history",
     "log"
   ],
-  "author": "Ozan Seymen",
+  "contributors":[
+    {
+      "name": "Charles Crossan",
+      "url": "https://crossan007.dev/"
+    },
+    {
+      "name": "Ozan crossan007",
+      "url": "https://github.com/seymen/git-last-commit"
+    }
+  ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/seymen/git-last-commit/issues"
+    "url": "https://github.com/crossan007/git-last-commit/issues"
   },
-  "homepage": "https://github.com/seymen/git-last-commit",
+  "homepage": "https://github.com/crossan007/git-last-commit",
   "devDependencies": {
     "chai": "^4",
     "mocha": "^6",
