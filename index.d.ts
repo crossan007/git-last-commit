@@ -1,3 +1,7 @@
+export interface Contributor {
+  name: string;
+  email: string;
+}
 export interface Commit {
   shortHash: string;
   hash: string;
@@ -6,17 +10,15 @@ export interface Commit {
   body: string;
   authoredOn: string;
   committedOn: string;
-  author: {
-    name: string;
-    email: string;
-  },
-  committer: {
-    name: string;
-    email: string;
-  },
+  author: Contributor;
+  committer: Contributor;
   notes?: string;
-  branch: string;
+}
+export interface RepoInfo {
+  commit: Commit;
+  head: string;
   tags: string[];
+  status: string[];
 }
 export interface Options {
   dst: string;
@@ -24,4 +26,4 @@ export interface Options {
 
 type GetLastCommitCallback = (err: Error | null, commit: Commit) => void;
 
-export const getLastCommit: (callback: GetLastCommitCallback, options?: Options) => void;
+export const getRepoInfo: ()=>Promise<RepoInfo>;
