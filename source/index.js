@@ -77,7 +77,8 @@
      commit: commit,
      head: head,
      tags: tag,
-     status: status
+     status: status,
+     isDirty: status.length > 0
    }
    return o;
  }

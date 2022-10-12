@@ -19,6 +19,7 @@ export interface RepoInfo {
   head: string;
   tags: string[];
   status: string[];
+  isDirty: boolean;
 }
 export interface Options {
   dst: string;
