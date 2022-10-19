@@ -124,7 +124,7 @@
         return {
           fileA: fileA,
           fileB: fileB,
-          extendedHeaders: extendedHeaders?.split('\n').filter(n=>n),
+          extendedHeaders: (typeof(extendedHeaders) == "string" && extendedHeaders.split('\n').filter(n=>n)),
           patchBody: patchBody
         }
       })
