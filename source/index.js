@@ -192,8 +192,11 @@ const getConventionalCommitStats = (commits)=>{
 }
 
 async function getRevList(upstream){
-  const result = await executeCommand(`git rev-list --count --left-right ${upstream}..HEAD`);
-  return ((/(?<behind>\d+)\s+(?<ahead>\d+)/).exec(result)).groups
+  const result = (await executeCommand(`git rev-list --count HEAD --not ${upstream} && git rev-list --count  ${upstream} --not HEAD`)).split("\n")
+  return {
+    ahead: result[0],
+    behind: result[1]
+  }
 }
 
 /**
