@@ -13,14 +13,64 @@
      })
    });
  }
+
+ const parseConventionalCommit = (commit) => {
+  const conventionalRegex = new RegExp(/^(?<type>feat|feature|fix|build|chore|ci|docs|style|refactor|perf|test)(?:\((?<scope>.*)\))?(?<breaking>!)?:\s(?<description>.*?)$[\s]?(?<body>[\s\S]*?)?/gim)
+  const match_result = conventionalRegex.exec(commit.rawBody)
+  if (!match_result) {
+    return false
+  }
+  const retVal = {
+    ...match_result.groups,
+    breaking: (
+      match_result.groups["breaking"] == "!" ||
+      (/BREAKING CHANGE/i).test(commit.rawBody)
+    ),
+    body: typeof(match_result.groups["body"]) == "string" ? match_result.groups["body"].trim() : ""
+  }
+  return retVal;
+}
+
+const getConventionalCommitStats = (commits)=>{
+  let retVal = {
+    nonConforming: 0,
+    types: {},
+    scopes: {},
+    breakingChanges: 0
+  };
+  commits.forEach((v,i,a)=>{
+    if (v.conventionalCommit == false) {
+      retVal.nonConforming += 1;
+    }
+    else {
+      //Increment the Types
+      if (!retVal.types[v.conventionalCommit.type]) {
+        retVal.types[v.conventionalCommit.type] = 0
+      }
+      retVal.types[v.conventionalCommit.type] += 1;
+      // Increment breaking changes
+      retVal.breakingChanges += v.conventionalCommit.breaking;
+      //Increment the scopes
+      if (v.conventionalCommit.scope) {
+        if (!retVal.scopes[v.conventionalCommit.scope]) {
+          retVal.scopes[v.conventionalCommit.scope] = 0
+        }
+        retVal.scopes[v.conventionalCommit.scope] += 1;
+      }
+    }
+  })
+  return retVal
+}
  
- const getLog = async () =>{
-   const splitCharacter = '<##>';
+ const getLog = async ({count,upstream}) =>{
+   const fieldSplitCharacter = '<##>';
+   const itemSplitCharacter = '<###>'
    const LogAttributes = [
      {symbol: "%h", name: "shortHash"}, 
      {symbol: "%H", name: "hash"}, 
      {symbol: "%s", name: "subject"}, 
      {symbol: "%f", name: "sanitizedSubject"}, 
+     {symbol: "%B", name: "rawBody"},
      {symbol: "%b", name: "body"}, 
      {symbol: "%at", name: "authoredOn"}, 
      {symbol: "%ct", name: "committedOn"}, 
@@ -28,25 +78,32 @@
      {symbol: "%ae", name: "author.email"}, 
      {symbol: "%cn", name: "committer.name"}, 
      {symbol: "%ce", name: "committer.email"}, 
-     {symbol: "%N", name: "notes"}
+     {symbol: "%N", name: "notes"},
+     {symbol: "%(trailers)", name: "trailers"}
    ]
-   const command =  'git log -1 --pretty=format:"' + LogAttributes.map(f=>f.symbol).join(splitCharacter) +'"';
+   const command =  `git log ${upstream ? upstream+"..HEAD" :''} ${count ? '-'+count : ''} --pretty=format:"` + itemSplitCharacter + LogAttributes.map(f=>f.symbol).join(fieldSplitCharacter) +'"';
    const res = await executeCommand(command);
-   let response = {};
-   res.split(splitCharacter).forEach((d,i,a) => {
-     const keyName = LogAttributes[i].name
-     if (keyName.includes(".")) {
-       const s = keyName.split(".")
-       response [s[0]] = {
-         [s[1]]: s
-       }
-     }
-     else {
-       response[keyName] = d;
-     }
-   })
- 
-   return response
+   const logItems= res.split(itemSplitCharacter)
+    .filter(n=>n)
+    .map(item=>{ 
+      let response = {};
+      item.substring(0,item.length-1).split(fieldSplitCharacter).forEach((d,i,a) => {
+      const keyName = LogAttributes[i%LogAttributes.length].name
+      if (keyName.includes(".")) {
+        const keyParts = keyName.split(".")
+        if (! response.hasOwnProperty(keyParts[0])) {
+          response [keyParts[0]] = {}
+        }
+        response [keyParts[0]][keyParts[1]] = d
+      }
+      else {
+        response[keyName] = d;
+      }
+    })
+    response.conventionalCommit = parseConventionalCommit(response)
+    return response
+  })
+   return logItems
  }
  
  const getHead = async ()=> {
@@ -67,7 +124,7 @@
  
  const getRepoInfo = async () => {
    const [commit, head, tag, status] = await Promise.all([
-     getLog(),
+     getLog({count: 1})[0],
      getHead(),
      getTags(),
      getStatus()
@@ -186,6 +243,8 @@ const formatTodos = (todos)=> todos.map(t=>(
    getRepoInfo,
    getPatches,
    getTodos,
+   getLog,
+   getConventionalCommitStats,
    formatTodos
  }
  
