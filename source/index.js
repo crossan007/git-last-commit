@@ -123,14 +123,14 @@ const getConventionalCommitStats = (commits)=>{
  }
  
  const getRepoInfo = async () => {
-   const [commit, head, tag, status] = await Promise.all([
-     getLog({count: 1})[0],
+   const [commits, head, tag, status] = await Promise.all([
+     getLog({count: 1}),
      getHead(),
      getTags(),
      getStatus()
    ]);
    const o = {
-     commit: commit,
+     commit: commits[0],
      head: head,
      tags: tag,
      status: status,
@@ -191,6 +191,11 @@ const getConventionalCommitStats = (commits)=>{
   })
 }
 
+async function getRevList(upstream){
+  const result = await executeCommand(`git rev-list --count --left-right ${upstream}..HEAD`);
+  return ((/(?<behind>\d+)\s+(?<ahead>\d+)/).exec(result)).groups
+}
+
 /**
  * Gets all instances of "todo" in comment lines
  * checks whether a JIRA-like key exists on the TODO line
@@ -245,6 +250,7 @@ const formatTodos = (todos)=> todos.map(t=>(
    getTodos,
    getLog,
    getConventionalCommitStats,
-   formatTodos
+   formatTodos,
+   getRevList
  }
  
