@@ -2,6 +2,14 @@ export interface Contributor {
   name: string;
   email: string;
 }
+
+export interface ConventionalCommit  {
+  type: string
+  scope: string
+  breaking: boolean
+  description: string
+  body: string
+}
 export interface Commit {
   shortHash: string;
   hash: string;
@@ -13,6 +21,7 @@ export interface Commit {
   author: Contributor;
   committer: Contributor;
   notes?: string;
+  conventionalCommit: ConventionalCommit | false
 }
 export interface RepoInfo {
   commit: Commit;
@@ -43,8 +52,8 @@ export interface ToDo {
 type GetLastCommitCallback = (err: Error | null, commit: Commit) => void;
 
 export const getRepoInfo: ()=>Promise<RepoInfo>;
-export const getLog: (props: {upstream: string})=>Promise<any>
+export const getLog: (props: {upstream: string})=>Promise<Commit[]>
 export const getConventionalCommitStats: (commits: Commit[])=>Promise<any>;
-export const getRevList: (branch: string)=>Promise<{ahead: string, behind: string}>;
+export const getRevList: (branch: string)=>Promise<{ahead: number, behind: number}>;
 export const getPatches: (upstream: string)=>Promise<Patch[]>
 export const getTodos: (patches: Patch[], jiraProjectKey: string)=>Promise<ToDo[]>
