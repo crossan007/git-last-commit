@@ -25,6 +25,19 @@ export interface Options {
   dst: string;
 }
 
+export interface Patch {
+  fileA: string
+  fileB: string
+  extendedHeaders: string[]
+  patchBody: string
+}
+
+
 type GetLastCommitCallback = (err: Error | null, commit: Commit) => void;
 
 export const getRepoInfo: ()=>Promise<RepoInfo>;
+export const getLog: (props: {upstream: string})=>Promise<any>
+export const getConventionalCommitStats: (commits: Commit[])=>Promise<any>;
+export const getRevList: (branch: string)=>Promise<any>;
+export const getPatches: (upstream: string)=> Patch[]
+export const getTodos: (patches: Patch[], jiraProjectKey: string)=>any

@@ -1,6 +1,6 @@
 {
   "name": "@crossan007/git-last-commit",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "Read details of the last commit including tags",
   "main": "./source/index.js",
   "types": "./index.d.ts",
