@@ -253,4 +253,24 @@ describe('feature: git-last-commit to return last commit info', function() {
       done();
     });
   });
+
+  it('should get patches using execFile without shell mode', async function() {
+    const execFileStub = sinon.stub(process, 'execFile');
+    execFileStub.yields(
+      null,
+      'diff --git a/src/a.js b/src/a.js\nindex 123..456 100644\n--- a/src/a.js\n+++ b/src/a.js\n+// TODO: TXBDEV-123 sample\n',
+      ''
+    );
+
+    const patches = await git.getPatches('origin/main');
+
+    expect(execFileStub.calledOnce).to.equal(true);
+    expect(execFileStub.firstCall.args[0]).to.equal('git');
+    expect(execFileStub.firstCall.args[1]).to.deep.equal(['diff', 'origin/main']);
+    expect(execFileStub.firstCall.args[2]).to.deep.equal({});
+    expect(patches).to.have.lengthOf(1);
+    expect(patches[0].fileA).to.equal('src/a.js');
+
+    execFileStub.restore();
+  });
 });

@@ -14,6 +14,22 @@
    });
  }
 
+  const executeFileCommand = (command, args, options) => {
+    return new Promise((resolve, reject) => {
+      process.execFile(command, args, options || {}, function(err, stdout, stderr) {
+        if (err) {
+          reject(err)
+          return
+        }
+        if (stderr) {
+          reject(stderr)
+          return
+        }
+        resolve(stdout)
+      })
+    })
+  }
+
  const parseConventionalCommit = (commit) => {
   const conventionalRegex = new RegExp(/^(?<type>feat|feature|fix|build|chore|ci|docs|style|refactor|perf|test)(?:\((?<scope>.*)\))?(?<breaking>!)?:\s(?<description>.*?)$[\s]?(?<body>[\s\S]*?)?/gim)
   const match_result = conventionalRegex.exec(commit.rawBody)
@@ -148,47 +164,35 @@ const getConventionalCommitStats = (commits)=>{
   * @returns 
   */
  async function getPatches(upstream)  {
-  return new Promise((resolve,reject) => {
-    let patch_buffer = ""
-    
-    const child = process.spawn('git', [`diff ${upstream}`], { shell: true})
+  const patch_buffer = await executeFileCommand('git', ['diff', upstream])
+  const patchHeaderRegex = new RegExp(/(diff --git a\/.*? b\/.*?\n)/)
+  const patches_split = patch_buffer.split(patchHeaderRegex)
+    .filter(n=>n)
+    .map((element,index,array) => {
+      if (index % 2 == 0) {
+        return;
+      }
+      return array[index-1] + element
+    })
+    .filter(n=>n)
 
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', function(data) {
-      patch_buffer += data
-    });
-
-    child.on('close', function(code) {
-      const patchHeaderRegex = new RegExp(/(diff --git a\/.*? b\/.*?\n)/)
-      const patches_split = patch_buffer.split(patchHeaderRegex)
-        .filter(n=>n)
-        .map((element,index,array) => {
-          if (index % 2 == 0) {
-            return;
-          }
-          return array[index-1] + element
-        })
-        .filter(n=>n)
-  
-      //log("split ", patches_split)
-      const patches_parsed = patches_split.map((s)=> {
-        const patchRegex = new RegExp(/^diff --git a\/(?<fileA>.*?) b\/(?<fileB>.*?)$\n^(?<extendedHeaders>[\s\S]+?)\n^--- a?(?<fileRemoved>\/.*?)$\n^\+\+\+ b?(?<fileAdded>\/.*?)$\n^(?<patchBody>[\s\S]*)/im)
-        const match_result = patchRegex.exec(s);
-        if (!match_result) {
-          return;
-        }
-        const { fileA, fileB, extendedHeaders, fileRemoved,fileAdded, patchBody} = match_result.groups
-        return {
-          fileA: fileA,
-          fileB: fileB,
-          extendedHeaders: (typeof(extendedHeaders) == "string" && extendedHeaders.split('\n').filter(n=>n)),
-          patchBody: patchBody
-        }
-      })
-      .filter(n=>n)
-      resolve(patches_parsed);
-    });   
+  const patches_parsed = patches_split.map((s)=> {
+    const patchRegex = new RegExp(/^diff --git a\/(?<fileA>.*?) b\/(?<fileB>.*?)$\n^(?<extendedHeaders>[\s\S]+?)\n^--- a?(?<fileRemoved>\/.*?)$\n^\+\+\+ b?(?<fileAdded>\/.*?)$\n^(?<patchBody>[\s\S]*)/im)
+    const match_result = patchRegex.exec(s);
+    if (!match_result) {
+      return;
+    }
+    const { fileA, fileB, extendedHeaders, patchBody} = match_result.groups
+    return {
+      fileA: fileA,
+      fileB: fileB,
+      extendedHeaders: (typeof(extendedHeaders) == "string" && extendedHeaders.split('\n').filter(n=>n)),
+      patchBody: patchBody
+    }
   })
+  .filter(n=>n)
+
+  return patches_parsed
 }
 
 async function getRevList(upstream){
